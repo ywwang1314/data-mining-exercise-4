@@ -1,0 +1,254 @@
+---
+title: "Data Mining Exercise 4"
+author: "Shankai Liao, Xing Xin, Yiwen Wang"
+date: "5/1/2022"
+output: md_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+# Question 1
+
+```{r, echo=FALSE,message=FALSE, warning=FALSE}
+library(factoextra)
+library(FactoMineR)
+library(cluster)
+library(tidyverse)
+library(patchwork)
+wine <- read.csv('https://raw.githubusercontent.com/jgscott/ECO395M/master/data/wine.csv')
+scale_wine <- as.data.frame(scale(wine[,1:11]))
+scale_wine$color <- wine$color
+```
+
+## Choose important components from PCA
+
+```{r, echo=FALSE,message=FALSE, warning=FALSE}
+pca1 <- princomp(scale(wine[,1:11]))
+fviz_eig(pca1)
+summary(pca1)
+```
+From this graph and table, we find that the percentage components 1-6 is 85.25% of whole components. So we think components 1-6 are imporntant variables in this question.
+
+```{r, echo=FALSE,message=FALSE, warning=FALSE}
+pca_wine <- as.data.frame(pca1$scores[,1:6])
+pca_wine$color <- wine$color
+```
+
+## Red or White Wine
+
+### kmeans
+```{r,echo=FALSE,message=FALSE, warning=FALSE, fig.width=12,fig.height=8}
+cluster1 <- kmeans(scale_wine[,1:11],2)
+scale_wine$cluster1 <- as.factor(cluster1$cluster)
+p1 <- scale_wine%>%
+  gather("index", "value",-c(color,cluster1))%>%
+  group_by(color,index)%>%
+  summarise(value = mean(value))%>%
+  ggplot(aes(index,value,fill=color))+
+  geom_col(position = "dodge")+
+  theme_bw()+
+  scale_fill_brewer(palette = "Pastel1")+
+  theme(legend.position="bottom",
+        axis.text.x = element_text(size=10,angle = 90))
+p2<- scale_wine%>%
+  gather("index", "value",-c(color,cluster1))%>%
+  group_by(cluster1,index)%>%
+  summarise(value = mean(value))%>%
+  ggplot(aes(index,value,fill=cluster1))+
+  geom_col(position = "dodge")+
+  theme_bw()+
+  scale_fill_brewer(palette = "Pastel1")+
+  labs(fill="kmeans")+
+   theme(legend.position="bottom",
+        axis.text.x = element_text(size=10,angle = 90))
+p1+p2
+```
+We used Kmeans and PCA to find if we can distinuish red wine from white wine.
+Firstly, the first picture illustrates the mean values of chemical properties of red and white wine and the second picture is the mean values of chemical properties in two clusters after using kmeans.After comparing two pictures, we found that red wine occupies in cluster 2 and the proportion of white wine is very large in cluster 1. So kmeans helps us distinguish red wine from white wine.
+
+### PCA
+```{r,echo=FALSE,message=FALSE, warning=FALSE, fig.width=12,fig.height=8}
+pca_wine%>%
+  gather("index", "value",-c(color))%>%
+  group_by(color,index)%>%
+  summarise(value = mean(value))%>%
+  ggplot(aes(index,value,fill=color))+
+  geom_col(position = "dodge")+
+  theme_bw()+
+  scale_fill_brewer(palette = "Pastel1")+
+  theme(legend.position="bottom")
+```
+Then we used the PCA method of using six important variables in this process. From this picutre, we found that the mean value of first important component in red wine is different from the mean value of first important component in white wine. This can help us distinguish red wine from white wine.
+
+## Wine's quality
+
+### kmeans
+```{r,echo=FALSE,message=FALSE, warning=FALSE, fig.width=12,fig.height=8}
+scale_wine$quality <- as.factor(wine$quality)
+cluster1 <- kmeans(scale_wine[,1:11],7)
+scale_wine$cluster1 <- as.factor(cluster1$cluster)
+p1 <- scale_wine%>%
+  select(-"color")%>%
+  gather("index", "value",-c(quality,cluster1))%>%
+  group_by(quality,index)%>%
+  summarise(value = mean(value))%>%
+  ggplot(aes(index,value,fill=quality))+
+  geom_col(position = "dodge")+
+  theme_bw()+
+  scale_fill_brewer(palette = "Pastel1")+
+   theme(legend.position="bottom",
+        axis.text.x = element_text(size=10,angle = 90))
+p2<- scale_wine%>%
+  select(-"color")%>%
+  gather("index", "value",-c(quality,cluster1))%>%
+  group_by(cluster1,index)%>%
+  summarise(value = mean(value))%>%
+  ggplot(aes(index,value,fill=cluster1))+
+  geom_col(position = "dodge")+
+  theme_bw()+
+  scale_fill_brewer(palette = "Pastel1")+
+  labs(fill="kmeans")+
+ theme(legend.position="bottom",
+        axis.text.x = element_text(size=10,angle = 90))
+p1+p2
+```
+We also used Kmeans and PCA to find if we can identify high or low quality of wine.
+Firstly, from these two pictures, We compared mean values of chemical properties of seven different qualities of wine and seven clusters' chemical properties' mean value after we using kmeans method. From seven clusters' plot, it's very difficult to identify high quality or low quality from chemical properties. One quality level might has high value in some properties and low value in some properties. So using kmeans method might be not effective to distinguish high quality wine from low quality wine.
+
+### PCA
+```{r,echo=FALSE,message=FALSE, warning=FALSE, fig.width=12,fig.height=8}
+pca_wine$quality <- as.factor(wine$quality)
+pca_wine%>%
+  select(-"color")%>%
+  gather("index", "value",-c(quality))%>%
+  group_by(quality,index)%>%
+  summarise(value = mean(value))%>%
+  ggplot(aes(index,value,fill=quality))+
+  geom_col(position = "dodge")+
+  theme_bw()+
+  scale_fill_brewer(palette = "Pastel1")+
+  theme(legend.position="bottom")
+```
+Then we chose six important variables to run PCA method. However, from this plot, the component 1 and component 2 are different and one quality number may has high mean value of the component 1 and the low value of component 2. So it's difficult to distinguish high quality wine from low quality wine about running PCA method. 
+
+# Question 2
+
+```{r, echo=FALSE,message=FALSE, warning=FALSE}
+library(curl)
+library(ggplot2)
+
+twitter = read.csv('https://raw.githubusercontent.com/jgscott/ECO395M/master/data/social_marketing.csv',header=TRUE, row.names=1)
+```
+Now that the dataset has been loaded, it must be prepared for dimensionality reduction.
+
+```{r, echo=FALSE,message=FALSE, warning=FALSE}
+Z = twitter/rowSums(twitter)
+pc2 = prcomp(Z, scale=TRUE, rank=2)
+scores = pc2$x
+loadings = pc2$rotation
+head(loadings)
+```
+Normalize key words counts to their frequencies
+The aim of this step is to standardize the range of the continuous initial variables so that each one of them contributes equally to the analysis.
+
+```{r, echo=FALSE,message=FALSE, warning=FALSE}
+o1 = order(loadings[,1], decreasing=TRUE)
+colnames(Z)[head(o1,5)]
+colnames(Z)[tail(o1,5)] 
+```
+
+We can see that the first principal component (PC1) has high values for "religion", "sports_fandom", "parenting", "food" and "school" which indicates that this principle component places most of its emphasis on politics.
+
+```{r, echo=FALSE,message=FALSE, warning=FALSE}
+o2 = order(loadings[,2], decreasing=TRUE)
+colnames(Z)[head(o2,5)]
+colnames(Z)[tail(o2,5)]
+```
+
+We can see that the first principal component (PC2) has high values for "chatter", "politics", "travel", "shopping" and "automotive" which indicates that this principal component describes the most variation in these variables.
+
+```{r, echo=FALSE,message=FALSE, warning=FALSE}
+pve = pc2$sdev^2/sum(pc2$sdev^2)
+plot(pve, ylab="Proportion of Variance Explained", xlab="Principal Component", col="purple")
+plot(cumsum(pve), type="o", ylab="Cumulative PVE", xlab="Principal Component", col="pink")
+```
+
+Calculate and plot Proportion of Variance Explained.We can see from the scree plot above that the point at which the proportion of variance explained by each subsequent principal component drops off is from the 10th principal component.
+
+After we using PCA method and the data of principal component 1, this group can be students because they are so interested in "religion", "sports", "parents", and "school". We can focus on this group and create products for this market segmentation like sports products and healthy food. 
+From the data of principal component 2, the group might be adult and middle-aged who like discussing "travel", "shopping", "chatter", and "automotive". We can focus on this group including shopping brands which adults are crazy, travel places soveniors which people like in this process. So this is our market segmentation ways of PCA method.
+
+
+# Question 3
+
+```{r, echo=FALSE,message=FALSE, warning=FALSE}
+library(tidyverse)
+library(arules) 
+library(arulesViz)
+library(igraph)
+
+groceries_raw <- read.csv('https://raw.githubusercontent.com/jgscott/ECO395M/master/data/groceries.txt', na.strings="", header = F, sep = ",")
+
+str(groceries_raw)
+summary(groceries_raw)
+```
+
+```{r, echo=FALSE,message=FALSE, warning=FALSE}
+groceries_preprocess <- groceries_raw %>% 
+  mutate(buyers = as.factor( c(1:nrow(groceries_raw)))) %>% 
+  select(buyers, everything()) %>% 
+  gather(key = "variables", value = "items",  V1:V4) %>% 
+  arrange(buyers) %>% 
+  drop_na(items)
+table(is.na(groceries_preprocess))
+
+
+groceries_topitems = groceries_preprocess %>%
+  group_by(items) %>%
+  summarize(count = n()) %>%
+  arrange(desc(count))
+
+head(groceries_topitems, 20) %>%
+  ggplot() +
+  geom_col(aes(x=reorder(items, count), y=count)) + 
+  coord_flip()
+```
+
+```{r, echo=FALSE,message=FALSE, warning=FALSE}
+groceries_preprocess$buyers = factor(groceries_preprocess$buyers)
+groceries = split(x=groceries_preprocess$items, f=groceries_preprocess$buyers)
+groceries[[1]]
+groceries[[2]]
+
+groceries = lapply(groceries, unique)
+groceries_buyers = as(groceries, "transactions")
+```
+
+```{r, echo=FALSE,message=FALSE, warning=FALSE}
+items = apriori(groceries_buyers, 
+                     parameter=list(support=.01, confidence=.1, maxlen=2))
+inspect(items)
+inspect(subset(items, lift > 3))
+inspect(subset(items, confidence > 0.5))
+inspect(subset(items, lift > 3 & confidence > 0.05))
+
+plot(items)
+plot(items, measure = c("support", "lift"), shading = "confidence")
+plot(items, method='two-key plot')
+```
+
+```{r, echo=FALSE,message=FALSE, warning=FALSE}
+inspect(subset(items, support > 0.1))
+inspect(subset(items, confidence > 0.3))
+
+sub1 = subset(items, subset=confidence > 0.01 & support > 0.005)
+plot(sub1, method='graph')
+plot(head(sub1, 100, by='lift'), method='graph')
+
+sub1 = subset(items, subset=confidence > 0.25 & support > 0.005)
+saveAsGraph(sub1, file = "musicrules.graphml")
+```
+
+By choosing so many rules for simplicity, this can make sense to some extent. As we can see, whipped/sour cream, curd, butter point to whole milk, since they all belong to the milk/dairy products. In addition, we can see that pastry point to rolls/buns. This is obviously logical. This also looks meaningful to us!
